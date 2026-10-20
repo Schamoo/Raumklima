@@ -1,0 +1,7 @@
+toggle_climate_preset:
+  fields:
+    climate_entity:
+      required: true
+      selector:
+        entity:
+          domain: climate

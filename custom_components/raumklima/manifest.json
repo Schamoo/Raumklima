@@ -1,0 +1,11 @@
+{
+  "domain": "raumklima",
+  "name": "Raumklima",
+  "documentation": "https://github.com/Schamoo/Raumklima",
+  "issue_tracker": "https://github.com/Schamoo/Raumklima/issues",
+  "version": "1.0.0",
+  "dependencies": ["frontend", "http"],
+  "codeowners": ["@Schamoo"],
+  "config_flow": true,
+  "iot_class": "local_push"
+}

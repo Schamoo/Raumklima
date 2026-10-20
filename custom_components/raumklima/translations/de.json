@@ -1,0 +1,235 @@
+{
+  "common": {
+    "base_mold_warning": "Erhöhte Wandfeuchte: seit {duration} Min. bei mindestens {threshold} %.",
+    "base_mold_critical": "Schimmelgefahr: Wandfeuchte seit {duration} Min. bei mindestens {threshold} %.",
+    "base_mold_current": "Wandfeuchte aktuell {humidity} %.",
+    "base_humidity_high": "Luftfeuchte seit {duration} Min. über {threshold} %.",
+    "base_humidity_elevated": "Luftfeuchte erhöht.",
+    "outdoor_effective": "Außenluft ist trockener, Lüften hilft.",
+    "outdoor_effective_critical": "Außenluft ist trockener, bitte jetzt lüften.",
+    "outdoor_ineffective": "Außenluft ist nicht trocken genug, Fenster geschlossen halten.",
+    "outdoor_unknown": "Außenwerte fehlen, Lüftungswirkung unklar.",
+    "humidity_ok": "Luftfeuchte normal, kein Lüften nötig.",
+    "data_missing": "Temperatur- oder Feuchtewerte fehlen, keine Empfehlung möglich.",
+    "window_open_prefix": "Fenster ist offen. {hint}",
+    "window_target_reached": "Zielfeuchte erreicht, Fenster kann geschlossen werden.",
+    "window_outdoor_unsuitable": "Außenluft ist nicht trocken genug, bitte Fenster schließen.",
+    "window_close": "Lüften bringt gerade nichts, bitte Fenster schließen.",
+    "window_open_too_long": "Fenster seit {duration} Min. offen, bitte schließen, sonst kühlt der Raum aus."
+  },
+  "config": {
+    "step": {
+      "user": {
+        "title": "Raumklima",
+        "menu_options": {
+          "global": "Globale Lüftungsschwellen einrichten",
+          "room": "Raum hinzufügen"
+        }
+      },
+      "room": {
+        "title": "Raumklima-Sensor einrichten",
+        "description": "Wähle ein VTherm-Gerät oder Raumtemperatur- und Luftfeuchtesensoren.",
+        "data": {
+          "room_name": "Raumname",
+          "vtherm_entity": "VTherm-Klima-Entity",
+          "room_temp_entity": "Raumtemperatursensor",
+          "room_humidity_entity": "Raumluftfeuchtesensor"
+        }
+      },
+      "global": {
+        "title": "Globale Lüftungsschwellen",
+        "description": "Diese Werte und Sensoren gelten für alle eingerichteten Räume.",
+        "data": {
+          "outdoor_temp_entity": "Außentemperatursensor",
+          "outdoor_humidity_entity": "Außenluftfeuchtesensor",
+          "humidity_on_threshold": "Einschaltgrenze relative Feuchte (%)",
+          "humidity_off_threshold": "Lüftungsziel bei offenem Fenster (%)",
+          "humidity_advisory_reset_threshold": "Hinweis zurücksetzen bei geschlossenem Fenster (%)",
+          "high_humidity_threshold": "Schwelle für anhaltend hohe Feuchte (%)",
+          "high_humidity_duration_minutes": "Dauer für stärkeren Hinweis (Minuten)",
+          "window_open_duration_minutes": "Erinnerung bei offenem Fenster nach (Minuten)",
+          "outdoor_drying_margin": "Mindestabstand absolute Feuchte innen/außen (g/m³)",
+          "outdoor_drying_hysteresis_margin": "Rückschaltabstand absolute Feuchte (g/m³)",
+          "mold_warning_threshold": "Vorwarnung Wandfeuchte (%)",
+          "mold_critical_threshold": "Kritische Wandfeuchte (%)",
+          "mold_warning_duration_minutes": "Warnzeit Wandfeuchte (Minuten)"
+        }
+      }
+    },
+    "error": {
+      "required": "Bitte gib einen Raumnamen ein.",
+      "room_source_required": "Wähle ein VTherm oder sowohl einen Raumtemperatur- als auch einen Luftfeuchtesensor.",
+      "room_source_already_configured": "Diese Quelle ist bereits einem anderen Raum zugeordnet.",
+      "humidity_order": "Es muss gelten: Lüftungsziel < Rücksetzgrenze bei geschlossenem Fenster < Einschaltgrenze < Schwelle für anhaltend hohe Feuchte.",
+      "drying_order": "Der Rückschaltabstand darf nicht größer als der Mindestabstand sein.",
+      "mold_order": "Die Vorwarnschwelle muss unter der kritischen Wandfeuchte liegen."
+    },
+    "abort": {
+      "already_configured": "Für diese Quelle ist bereits ein Raumklima-Sensor eingerichtet."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Raumklima-Einstellungen",
+        "description": "Globale Schwellen gelten für alle Räume. Raumquellen können pro Raum geändert werden.",
+        "data": {
+          "room_name": "Raumname",
+          "vtherm_entity": "VTherm-Klima-Entity",
+          "room_temp_entity": "Raumtemperatursensor",
+          "room_humidity_entity": "Raumluftfeuchtesensor",
+          "calibration_factor": "Kalibrierfaktor Schimmelmodell",
+          "outdoor_temp_entity": "Außentemperatursensor",
+          "outdoor_humidity_entity": "Außenluftfeuchtesensor",
+          "humidity_on_threshold": "Einschaltgrenze relative Feuchte (%)",
+          "humidity_off_threshold": "Lüftungsziel bei offenem Fenster (%)",
+          "humidity_advisory_reset_threshold": "Hinweis zurücksetzen bei geschlossenem Fenster (%)",
+          "high_humidity_threshold": "Schwelle für anhaltend hohe Feuchte (%)",
+          "high_humidity_duration_minutes": "Dauer für stärkeren Hinweis (Minuten)",
+          "window_open_duration_minutes": "Erinnerung bei offenem Fenster nach (Minuten)",
+          "outdoor_drying_margin": "Mindestabstand absolute Feuchte innen/außen (g/m³)",
+          "outdoor_drying_hysteresis_margin": "Rückschaltabstand absolute Feuchte (g/m³)",
+          "mold_warning_threshold": "Vorwarnung Wandfeuchte (%)",
+          "mold_critical_threshold": "Kritische Wandfeuchte (%)",
+          "mold_warning_duration_minutes": "Warnzeit Wandfeuchte (Minuten)"
+        }
+      }
+    },
+    "error": {
+      "required": "Bitte gib einen Raumnamen ein.",
+      "room_source_already_configured": "Diese Quelle ist bereits einem anderen Raum zugeordnet.",
+      "humidity_order": "Es muss gelten: Lüftungsziel < Rücksetzgrenze bei geschlossenem Fenster < Einschaltgrenze < Schwelle für anhaltend hohe Feuchte.",
+      "drying_order": "Der Rückschaltabstand darf nicht größer als der Mindestabstand sein.",
+      "mold_order": "Die Vorwarnschwelle muss unter der kritischen Wandfeuchte liegen.",
+      "calibration_factor_min": "Der Kalibrierfaktor muss mindestens 1,0 betragen."
+    }
+  },
+  "services": {
+    "toggle_climate_preset": {
+      "name": "Klima-Preset umschalten",
+      "description": "Schaltet das Preset der Klima-Entity zwischen Eco und Komfort um.",
+      "fields": {
+        "climate_entity": {
+          "name": "Klima-Entity",
+          "description": "Die Klima-Entity, deren Preset umgeschaltet werden soll."
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "invalid_climate_entity": {
+      "message": "climate_entity muss auf eine Klima-Entity verweisen."
+    },
+    "climate_entity_not_found": {
+      "message": "Die Klima-Entity {climate_entity} wurde nicht gefunden."
+    },
+    "preset_not_supported": {
+      "message": "Die Klima-Entity {climate_entity} unterstützt das Preset {preset} nicht."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "status": {
+        "name": "Lüftungshinweis",
+        "state_attributes": {
+          "status_text": {
+            "name": "Status"
+          },
+          "ventilation_hint": {
+            "name": "Lüftungshinweis"
+          },
+          "window_open": {
+            "name": "Fenster offen"
+          },
+          "ventilation_needed": {
+            "name": "Lüftungsbedarf"
+          },
+          "ventilation_effective": {
+            "name": "Lüften effektiv"
+          },
+          "target_reached": {
+            "name": "Lüftungsziel erreicht"
+          },
+          "close_required": {
+            "name": "Fenster schließen"
+          },
+          "mold_risk": {
+            "name": "Schimmelrisiko"
+          }
+        },
+        "state": {
+          "ok": "Alles ok",
+          "ventilation_possible": "Lüften möglich",
+          "ventilate": "Lüften",
+          "close_recommended": "Schließen empfohlen",
+          "missing_data": "Daten fehlen"
+        }
+      },
+      "temperature": {
+        "name": "Temperatur"
+      },
+      "relative_humidity": {
+        "name": "Relative Luftfeuchtigkeit"
+      },
+      "absolute_humidity_indoor": {
+        "name": "Absolute Feuchte innen"
+      },
+      "absolute_humidity_outdoor": {
+        "name": "Absolute Feuchte außen"
+      },
+      "mold_risk": {
+        "name": "Schimmelrisiko",
+        "state": {
+          "low": "Gering",
+          "elevated": "Erhöht",
+          "high": "Hoch",
+          "unknown": "Unbekannt",
+          "not_relevant": "Nicht relevant"
+        }
+      },
+      "estimated_wall_humidity": {
+        "name": "Geschätzte Wandfeuchte"
+      },
+      "mold_warning_duration": {
+        "name": "Wandfeuchte über Warnschwelle seit",
+        "state": {
+          "off": "Aus"
+        },
+        "state_attributes": {
+          "warning_duration_minutes": {
+            "name": "Warnzeit (min)"
+          },
+          "critical_duration_minutes": {
+            "name": "Kritische Dauer (min)"
+          }
+        }
+      },
+      "high_humidity_since": {
+        "name": "Hohe Luftfeuchtigkeit über Schwelle seit",
+        "state": {
+          "off": "Aus"
+        }
+      },
+      "ventilation_hint": {
+        "name": "Lüftungshinweis"
+      }
+    },
+    "binary_sensor": {
+      "ventilation_needed": {
+        "name": "Lüftungsbedarf"
+      },
+      "ventilation_effective": {
+        "name": "Lüften effektiv"
+      },
+      "target_reached": {
+        "name": "Lüftungsziel erreicht"
+      },
+      "window_open": {
+        "name": "Fenster offen"
+      },
+      "close_required": {
+        "name": "Fenster schließen"
+      }
+    }
+  }
+}

@@ -1,0 +1,143 @@
+alias: 'Klima: Raumhinweise (Lüften, Schließen, Schimmel)'
+description: >-
+  Pro Raum: Lüftungsempfehlung (Status "ventilate") und Schimmelwarnung
+  (erhöht/hoch, nur bei effektivem Lüften, poppt bei Eskalation neu auf). Eine
+  gemeinsame Schließmeldung, sobald alle offenen Räume fertig sind. Läuft über
+  die Attribute der Raumklima-Hauptsensoren, neue Räume greifen automatisch.
+triggers:
+  - trigger: event
+    event_type: state_changed
+conditions:
+  - condition: template
+    value_template: |-
+      {% set new = trigger.event.data.new_state %} {{ new is not none
+         and trigger.event.data.entity_id.startswith('sensor.')
+         and new.state not in ['unknown', 'unavailable']
+         and new.attributes.get('room_name') is not none }}
+actions:
+  - variables:
+      raum_key: >-
+        {{ trigger.event.data.entity_id.split('.')[1] | replace('raumklima_',
+        '') }}
+      raum: '{{ trigger.event.data.new_state.attributes.get(''room_name'') }}'
+      sig: >-
+        {%- set ns = namespace(r=[]) -%} {%- for s in
+        [trigger.event.data.old_state, trigger.event.data.new_state] -%}
+          {%- set a = s.attributes if s is not none else {} -%}
+          {%- set offen = a.get('window_open') == true -%}
+          {%- set eff = a.get('ventilation_effective') == true -%}
+          {%- set risiko = a.get('mold_risk') -%}
+          {%- set basis = s is not none and s.state == 'ventilate' and eff and not offen -%}
+          {%- set schimmel = risiko if basis and risiko in ['elevated', 'high'] else '' -%}
+          {%- set ns.r = ns.r + [{
+            'lueften': basis and schimmel == '',
+            'schliessen': s is not none and s.state == 'close_recommended' and offen
+                          and a.get('close_required') == true,
+            'schimmel': schimmel,
+            'fenster': offen
+          }] -%}
+        {%- endfor -%} {{ ns.r }}
+      alt: '{{ sig[0] }}'
+      neu: '{{ sig[1] }}'
+  - condition: template
+    value_template: '{{ alt != neu }}'
+  - if:
+      - condition: template
+        value_template: '{{ neu.schimmel != '''' and neu.schimmel != alt.schimmel }}'
+      - condition: state
+        entity_id: binary_sensor.jemand_daheim
+        state: 'on'
+    then:
+      - action: script.zentrale_benachrichtigung
+        data:
+          titel: >-
+            {{ '🚨' if neu.schimmel == 'high' else '⚠️' }} Schimmelrisiko {{
+            'hoch' if neu.schimmel == 'high' else 'erhöht' }}: {{ raum }}
+          nachricht: |-
+            {{ trigger.event.data.new_state.attributes.get('ventilation_hint')
+               or 'Bitte lüften!' }}
+          zusatz_daten:
+            tag: raumklima-schimmel-{{ raum_key }}
+            icon: mdi:alert-decagram
+            alert_once: false
+  - if:
+      - condition: template
+        value_template: '{{ alt.schimmel != '''' and neu.schimmel == '''' }}'
+    then:
+      - action: script.zentrale_benachrichtigung
+        data:
+          nachricht: clear_notification
+          zusatz_daten:
+            tag: raumklima-schimmel-{{ raum_key }}
+  - if:
+      - condition: template
+        value_template: |-
+          {{ not is_state('input_select.hausmodus', 'sommer')
+             and neu.lueften and not alt.lueften }}
+    then:
+      - action: script.zentrale_benachrichtigung
+        data:
+          titel: '💨 Lüften empfohlen: {{ raum }}'
+          nachricht: >-
+            {{ trigger.event.data.new_state.attributes.get('ventilation_hint',
+            '') }}
+          zusatz_daten:
+            tag: raumklima-lueften-{{ raum_key }}
+            icon: mdi:air-filter
+            priority: high
+  - if:
+      - condition: template
+        value_template: '{{ alt.lueften and not neu.lueften }}'
+    then:
+      - action: script.zentrale_benachrichtigung
+        data:
+          nachricht: clear_notification
+          zusatz_daten:
+            tag: raumklima-lueften-{{ raum_key }}
+  - if:
+      - condition: template
+        value_template: '{{ alt.schliessen != neu.schliessen or alt.fenster != neu.fenster }}'
+    then:
+      - variables:
+          offene: |-
+            {{ integration_entities('raumklima')
+               | select('is_state_attr', 'window_open', true) | list }}
+          fertige: |-
+            {{ offene | select('is_state', 'close_recommended')
+               | select('is_state_attr', 'close_required', true) | list }}
+          alle_fertig: |-
+            {{ not is_state('input_select.hausmodus', 'sommer')
+               and offene | length > 0
+               and offene | length == fertige | length }}
+      - if:
+          - condition: template
+            value_template: '{{ alle_fertig }}'
+        then:
+          - action: script.zentrale_benachrichtigung
+            data:
+              titel: |-
+                {% if fertige | length == 1 -%}
+                  🪟 Fenster {{ state_attr(fertige[0], 'room_name') }} schließen
+                {%- else -%}
+                  🪟 Querlüften: Alle Räume fertig
+                {%- endif %}
+              nachricht: |-
+                {% if fertige | length == 1 -%}
+                  {{ state_attr(fertige[0], 'ventilation_hint')
+                     or 'Das Lüftungsziel ist erreicht. Bitte das Fenster schließen.' }}
+                {%- else -%}
+                  Alle offenen Räume sind fertig gelüftet. Du kannst die Fenster jetzt schließen.
+                {%- endif %}
+              zusatz_daten:
+                tag: raumklima-fenster-schliessen
+                icon: mdi:window-closed
+                priority: high
+                alert_once: true
+        else:
+          - action: script.zentrale_benachrichtigung
+            data:
+              nachricht: clear_notification
+              zusatz_daten:
+                tag: raumklima-fenster-schliessen
+mode: queued
+max: 20

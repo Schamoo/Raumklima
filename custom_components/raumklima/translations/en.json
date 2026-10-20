@@ -1,0 +1,178 @@
+{
+  "common": {
+    "base_mold_warning": "Elevated wall humidity: at least {threshold}% for {duration} min.",
+    "base_mold_critical": "Mold risk: wall humidity at least {threshold}% for {duration} min.",
+    "base_mold_current": "Wall humidity is currently {humidity}%.",
+    "base_humidity_high": "Humidity above {threshold}% for {duration} min.",
+    "base_humidity_elevated": "Humidity is elevated.",
+    "outdoor_effective": "Outdoor air is drier, ventilating helps.",
+    "outdoor_effective_critical": "Outdoor air is drier, please ventilate now.",
+    "outdoor_ineffective": "Outdoor air is not dry enough; keep windows closed.",
+    "outdoor_unknown": "Outdoor values missing, effect of ventilating unclear.",
+    "humidity_ok": "Humidity is normal, no ventilation needed.",
+    "data_missing": "Temperature or humidity values missing, no advice available.",
+    "window_open_prefix": "Window is open. {hint}",
+    "window_target_reached": "Target humidity reached, the window can be closed.",
+    "window_outdoor_unsuitable": "Outdoor air is not dry enough; please close the window.",
+    "window_close": "Ventilating doesn't help right now, please close the window.",
+    "window_open_too_long": "Window has been open for {duration} min, please close it or the room will cool down."
+  },
+  "config": {
+    "step": {
+      "user": {
+        "title": "Room climate",
+        "menu_options": {
+          "global": "Set up global ventilation thresholds",
+          "room": "Add a room"
+        }
+      },
+      "room": {
+        "title": "Set up room climate sensor",
+        "description": "Choose a VTherm device or room temperature and humidity sensors.",
+        "data": {
+          "room_name": "Room name",
+          "vtherm_entity": "VTherm climate entity",
+          "room_temp_entity": "Room temperature sensor",
+          "room_humidity_entity": "Room humidity sensor"
+        }
+      },
+      "global": {
+        "title": "Global ventilation thresholds",
+        "description": "These values and sensors apply to all configured rooms.",
+        "data": {
+          "outdoor_temp_entity": "Outdoor temperature sensor",
+          "outdoor_humidity_entity": "Outdoor humidity sensor",
+          "humidity_on_threshold": "Relative humidity activation threshold (%)",
+          "humidity_off_threshold": "Relative humidity release threshold (%)",
+          "humidity_advisory_reset_threshold": "Advisory reset threshold when the window is closed (%)",
+          "high_humidity_threshold": "Sustained high humidity threshold (%)",
+          "high_humidity_duration_minutes": "Duration for stronger advice (minutes)",
+          "window_open_duration_minutes": "Window-open reminder after (minutes)",
+          "outdoor_drying_margin": "Minimum indoor/outdoor absolute humidity difference (g/m³)",
+          "outdoor_drying_hysteresis_margin": "Absolute humidity release difference (g/m³)",
+          "mold_warning_threshold": "Estimated wall humidity warning (%)",
+          "mold_critical_threshold": "Estimated wall humidity critical level (%)",
+          "mold_warning_duration_minutes": "Wall humidity warning duration (minutes)"
+        }
+      }
+    },
+    "error": {
+      "required": "Enter a room name.",
+      "room_source_required": "Choose a VTherm or both a room temperature and humidity sensor.",
+      "room_source_already_configured": "This source is already configured for another room.",
+      "humidity_order": "The airing target must be below the closed-window reset threshold, which must be below the activation threshold and the sustained-high threshold.",
+      "drying_order": "The release margin cannot exceed the minimum drying margin.",
+      "mold_order": "The wall-humidity warning threshold must be below the critical threshold."
+    },
+    "abort": {
+      "already_configured": "A room climate sensor is already configured for this source."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Room climate settings",
+        "description": "Global thresholds apply to every room. Room sources can be changed per room.",
+        "data": {
+          "room_name": "Room name",
+          "vtherm_entity": "VTherm climate entity",
+          "room_temp_entity": "Room temperature sensor",
+          "room_humidity_entity": "Room humidity sensor",
+          "calibration_factor": "Mold model calibration factor",
+          "outdoor_temp_entity": "Outdoor temperature sensor",
+          "outdoor_humidity_entity": "Outdoor humidity sensor",
+          "humidity_on_threshold": "Relative humidity activation threshold (%)",
+          "humidity_off_threshold": "Relative humidity release threshold (%)",
+          "humidity_advisory_reset_threshold": "Advisory reset threshold when the window is closed (%)",
+          "high_humidity_threshold": "Sustained high humidity threshold (%)",
+          "high_humidity_duration_minutes": "Duration for stronger advice (minutes)",
+          "window_open_duration_minutes": "Window-open reminder after (minutes)",
+          "outdoor_drying_margin": "Minimum indoor/outdoor absolute humidity difference (g/m³)",
+          "outdoor_drying_hysteresis_margin": "Absolute humidity release difference (g/m³)",
+          "mold_warning_threshold": "Estimated wall humidity warning (%)",
+          "mold_critical_threshold": "Estimated wall humidity critical level (%)", "mold_warning_duration_minutes": "Wall humidity warning duration (minutes)"
+        }
+      }
+    },
+    "error": {
+      "required": "Enter a room name.",
+      "room_source_already_configured": "This source is already configured for another room.",
+      "humidity_order": "The airing target must be below the closed-window reset threshold, which must be below the activation threshold and the sustained-high threshold.",
+      "drying_order": "The release margin cannot exceed the minimum drying margin.",
+      "mold_order": "The wall-humidity warning threshold must be below the critical threshold.",
+      "calibration_factor_min": "The calibration factor must be at least 1.0."
+    }
+  },
+  "services": {
+    "toggle_climate_preset": {
+      "name": "Toggle climate preset",
+      "description": "Switch the climate entity between eco and comfort presets.",
+      "fields": {
+        "climate_entity": {
+          "name": "Climate entity",
+          "description": "The climate entity whose preset should be toggled."
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "invalid_climate_entity": {
+      "message": "climate_entity must reference a climate entity."
+    },
+    "climate_entity_not_found": {
+      "message": "Climate entity {climate_entity} was not found."
+    },
+    "preset_not_supported": {
+      "message": "Climate entity {climate_entity} does not support the {preset} preset."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "status": {
+        "name": "Ventilation advice",
+        "state_attributes": {
+          "status_text": {"name": "Status"},
+          "ventilation_hint": {"name": "Ventilation advice"},
+          "window_open": {"name": "Window open"},
+          "ventilation_needed": {"name": "Ventilation needed"},
+          "ventilation_effective": {"name": "Ventilation effective"},
+          "target_reached": {"name": "Ventilation target reached"},
+          "close_required": {"name": "Close window"},
+          "mold_risk": {"name": "Mold risk"}
+        },
+        "state": {
+          "ok": "All clear",
+          "ventilation_possible": "Ventilation possible",
+          "ventilate": "Ventilate",
+          "close_recommended": "Closing recommended",
+          "missing_data": "Data missing"
+        }
+      },
+      "temperature": {"name": "Temperature"},
+      "relative_humidity": {"name": "Relative humidity"},
+      "absolute_humidity_indoor": {"name": "Absolute humidity indoors"},
+      "absolute_humidity_outdoor": {"name": "Absolute humidity outdoors"},
+      "mold_risk": {
+        "name": "Mold risk",
+        "state": {
+          "low": "Low",
+          "elevated": "Elevated",
+          "high": "High",
+          "unknown": "Unknown",
+          "not_relevant": "Not relevant"
+        }
+      },
+      "estimated_wall_humidity": {"name": "Estimated wall humidity"},
+      "mold_warning_duration": {"name": "Wall humidity above warning threshold for", "state": {"off": "Off"}, "state_attributes": {"warning_duration_minutes": {"name": "Warning duration (min)"}, "critical_duration_minutes": {"name": "Critical duration (min)"}}},
+      "high_humidity_since": {"name": "High humidity above threshold for", "state": {"off": "Off"}},
+      "ventilation_hint": {"name": "Ventilation advice"}
+    },
+    "binary_sensor": {
+      "ventilation_needed": {"name": "Ventilation needed"},
+      "ventilation_effective": {"name": "Ventilation effective"},
+      "target_reached": {"name": "Ventilation target reached"},
+      "window_open": {"name": "Window open"},
+      "close_required": {"name": "Close window"}
+    }
+  }
+}
