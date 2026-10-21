@@ -291,8 +291,8 @@ class RaumklimaCard extends HTMLElement {
           {
             type: "template",
             entity: climateEntity,
-            icon: `{% set mode = state_attr('${climateEntity}', 'preset_mode') %} {% if mode == 'eco' %} mdi:leaf {% elif mode == 'boost' %} mdi:rocket-launch {% else %} mdi:sofa-outline {% endif %}`,
-            icon_color: `{% set mode = state_attr('${climateEntity}', 'preset_mode') %} {% if mode == 'eco' %} green {% elif mode == 'boost' %} red {% else %} orange {% endif %}`,
+            icon: `{% set mode = state_attr('${climateEntity}', 'preset_mode') %} {% if mode == 'eco' %} mdi:leaf {% elif mode == 'boost' %} mdi:rocket-launch {% elif mode == 'frost' %} mdi:snowflake {% else %} mdi:sofa-outline {% endif %}`,
+            icon_color: `{% set mode = state_attr('${climateEntity}', 'preset_mode') %} {% if mode == 'eco' %} green {% elif mode == 'boost' %} red {% elif mode == 'frost' %} blue {% else %} orange {% endif %}`,
             tap_action: {
               action: "call-service",
               service: "raumklima.toggle_climate_preset",
