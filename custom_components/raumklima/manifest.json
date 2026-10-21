@@ -3,7 +3,7 @@
   "name": "Raumklima",
   "documentation": "https://github.com/Schamoo/Raumklima",
   "issue_tracker": "https://github.com/Schamoo/Raumklima/issues",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "dependencies": ["frontend", "http"],
   "codeowners": ["@Schamoo"],
   "config_flow": true,
