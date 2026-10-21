@@ -20,11 +20,11 @@ from homeassistant.util import dt as dt_util
 from .const import (
     CONF_CALIBRATION_FACTOR,
     CONF_HIGH_HUMIDITY,
+    CONF_HUMIDITY_ADVISORY_RESET,
     CONF_HIGH_HUMIDITY_MINUTES,
     CONF_WINDOW_OPEN_DURATION_MINUTES,
     CONF_HUMIDITY_OFF,
     CONF_HUMIDITY_ON,
-    CONF_HUMIDITY_ADVISORY_RESET,
     CONF_OUTDOOR_HUMIDITY_ENTITY,
     CONF_OUTDOOR_TEMP_ENTITY,
     CONF_ROOM_NAME,
@@ -650,7 +650,6 @@ class RoomClimateCoordinator:
             f"entity.sensor.status.state.{self.data['status']}",
             fallback=self.data["status_text"],
         )
-        # Don't overwrite previous_status when data is missing - preserves ventilation cycle
         if self.data["status"] != "missing_data":
             self._previous_status = self.data["status"]
         for listener in tuple(self._listeners):

@@ -94,15 +94,13 @@ def update_high_humidity_since(
     since,
     now,
     threshold=HIGH_HUMIDITY_THRESHOLD,
-    *,
-    inclusive=False,
 ):
     """Track a strict continuous interval above the configured RH threshold."""
     humidity = _number(relative_humidity)
     if (
         not indoor_valid
         or humidity is None
-        or (humidity < threshold if inclusive else humidity <= threshold)
+        or humidity <= threshold
     ):
         return None
     return since or now
@@ -276,17 +274,10 @@ def calculate_room_climate(
         mold_risk = "low"
 
     window_open = window_state == "on" if window_state in ("on", "off") else None
-    cycle_was_active = previous_status in (
-        "ventilation_possible",
-        "ventilate",
-        "close_recommended",
-    )
-    active = cycle_was_active and not (
-        previous_status == "close_recommended" and window_open is not True
-    )
+    cycle_active = window_open is True
     mold_limit = (
         mold_warning_threshold - MOLD_WARNING_HYSTERESIS
-        if active
+        if cycle_active
         else mold_warning_threshold
     )
     mold_risk_requires_ventilation = (
@@ -294,28 +285,36 @@ def calculate_room_climate(
         and wall_humidity is not None
         and wall_humidity >= mold_limit
     )
-    if active and window_open is True:
+    advisory_was_active = previous_status in ("ventilation_possible", "ventilate")
+    if cycle_active:
         humidity_limit = humidity_off_threshold
-    elif active:
+    elif advisory_was_active:
         humidity_limit = humidity_advisory_reset_threshold
     else:
         humidity_limit = humidity_on_threshold
     ventilation_needed = indoor_valid and relative_humidity > humidity_limit
     target_reached = (
-        cycle_was_active
-        and window_open is True
+        cycle_active
         and indoor_valid
         and relative_humidity <= humidity_off_threshold
         and not mold_risk_requires_ventilation
     )
-    delta = None
-    if indoor_valid and outdoor_valid:
-        delta = absolute_humidity(temperature, relative_humidity) - absolute_humidity(
+    absolute_humidity_indoor = None
+    absolute_humidity_outdoor = None
+    if indoor_valid:
+        absolute_humidity_indoor = absolute_humidity(temperature, relative_humidity)
+    if outdoor_valid:
+        absolute_humidity_outdoor = absolute_humidity(
             outdoor_temperature, outdoor_relative_humidity
         )
+    delta = (
+        absolute_humidity_indoor - absolute_humidity_outdoor
+        if absolute_humidity_indoor is not None and absolute_humidity_outdoor is not None
+        else None
+    )
     margin = (
         outdoor_drying_hysteresis_margin
-        if active
+        if cycle_active
         else outdoor_drying_margin
     )
     ventilation_effective = delta >= margin if delta is not None else None
@@ -340,7 +339,7 @@ def calculate_room_climate(
         mold_risk_requires_ventilation
         and ventilation_effective is True
     )
-    cycle_close_required = cycle_was_active and (
+    cycle_close_required = cycle_active and (
         ventilation_needed
         and not mold_risk_requires_ventilation
         and ventilation_effective is False
@@ -449,14 +448,8 @@ def calculate_room_climate(
         "high_wall_humidity_seconds": max(0, int(high_wall_humidity_seconds)),
         "temperature": temperature if indoor_valid else None,
         "relative_humidity": relative_humidity if indoor_valid else None,
-        "absolute_humidity_indoor": (
-            absolute_humidity(temperature, relative_humidity) if indoor_valid else None
-        ),
-        "absolute_humidity_outdoor": (
-            absolute_humidity(outdoor_temperature, outdoor_relative_humidity)
-            if outdoor_valid
-            else None
-        ),
+        "absolute_humidity_indoor": absolute_humidity_indoor,
+        "absolute_humidity_outdoor": absolute_humidity_outdoor,
         "estimated_wall_humidity": wall_humidity,
         "mold_risk": mold_risk,
         "ventilation_hint_base_key": hint_base_key,

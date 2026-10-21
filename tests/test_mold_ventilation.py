@@ -48,36 +48,38 @@ class MoldVentilationTests(unittest.TestCase):
                 )
 
     def test_warning_threshold_starts_ventilation(self):
-        result = self.calculate(relative_humidity=45, previous_status="ok")
+        result = self.calculate(relative_humidity=45)
         self.assertEqual(result["status"], "ok")
 
         result = self.calculate(
             relative_humidity=49,
-            previous_status="ok",
             humidity_on_threshold=48,
         )
         self.assertEqual(result["status"], "ventilation_possible")
 
-    def test_warning_hysteresis_keeps_active_cycle(self):
-        for relative_humidity in (51, 50):
-            with self.subTest(relative_humidity=relative_humidity):
-                result = self.calculate(
-                    relative_humidity=relative_humidity,
-                    previous_status="ventilation_possible",
-                    humidity_advisory_reset_threshold=49,
-                )
-                self.assertEqual(result["status"], "ventilation_possible")
+    def test_open_window_starts_cycle_and_uses_ventilation_target(self):
+        result = self.calculate(
+            relative_humidity=54,
+            temperature=20.4,
+            outdoor_temperature=20.4,
+            wall_humidity_value=0,
+            window_state="on",
+            humidity_off_threshold=55,
+        )
+        self.assertTrue(result["target_reached"])
+        self.assertTrue(result["close_required"])
+        self.assertEqual(result["status"], "close_recommended")
 
     def test_hysteresis_release_depends_on_window_state(self):
         result = self.calculate(
             relative_humidity=45,
-            previous_status="ventilation_possible",
+            wall_humidity_value=0,
         )
         self.assertEqual(result["status"], "ok")
 
         result = self.calculate(
             relative_humidity=45,
-            previous_status="ventilation_possible",
+            wall_humidity_value=0,
             window_state="on",
         )
         self.assertEqual(result["status"], "close_recommended")
@@ -85,7 +87,6 @@ class MoldVentilationTests(unittest.TestCase):
     def test_target_is_not_reached_while_wall_risk_remains(self):
         result = self.calculate(
             relative_humidity=57,
-            previous_status="ventilation_possible",
             window_state="on",
         )
         self.assertEqual(result["status"], "ventilation_possible")
@@ -95,7 +96,6 @@ class MoldVentilationTests(unittest.TestCase):
     def test_ineffective_outdoor_air_does_not_close_window_with_wall_need(self):
         result = self.calculate(
             relative_humidity=57,
-            previous_status="ventilation_possible",
             window_state="on",
             outdoor_drying_hysteresis_margin=10,
         )
@@ -186,7 +186,6 @@ class MoldVentilationTests(unittest.TestCase):
     def test_critical_wall_risk_closes_an_open_window_after_timeout(self):
         result = self.calculate(
             relative_humidity=57,
-            previous_status="ventilation_possible",
             window_state="on",
             window_open_seconds=3600,
             outdoor_drying_hysteresis_margin=10,
@@ -205,7 +204,6 @@ class MoldVentilationTests(unittest.TestCase):
     def test_ineffective_air_closes_open_window_when_wall_warning_elapsed(self):
         result = self.calculate(
             relative_humidity=57,
-            previous_status="ventilation_possible",
             window_state="on",
             window_open_seconds=60,
             outdoor_drying_margin=10,
@@ -320,17 +318,18 @@ class MoldVentilationTests(unittest.TestCase):
         self.assertEqual(result["mold_risk"], "unknown")
         self.assertIsNone(result["estimated_wall_humidity"])
 
-    def test_open_window_without_active_cycle_is_not_a_close_recommendation(self):
+    def test_open_window_starts_cycle_without_prior_ventilation_status(self):
         result = self.calculate(
             relative_humidity=50,
             outdoor_temperature=15,
-            previous_status="ok",
+            wall_humidity_value=0,
             window_state="on",
         )
-        self.assertEqual(result["status"], "ok")
-        self.assertFalse(result["close_required"])
+        self.assertEqual(result["status"], "close_recommended")
+        self.assertTrue(result["target_reached"])
+        self.assertTrue(result["close_required"])
 
-    def test_critical_wall_humidity_timer_includes_threshold(self):
+    def test_high_humidity_timer_requires_value_above_threshold(self):
         self.assertEqual(
             update_high_humidity_since(
                 80,
@@ -338,19 +337,18 @@ class MoldVentilationTests(unittest.TestCase):
                 None,
                 self.now,
                 threshold=80,
-                inclusive=True,
             ),
-            self.now,
+            None,
         )
-        self.assertIsNone(
+        self.assertEqual(
             update_high_humidity_since(
-                79,
+                80.1,
                 True,
                 None,
                 self.now,
                 threshold=80,
-                inclusive=True,
-            )
+            ),
+            self.now,
         )
 
     def test_wall_humidity_timer_starts_at_warning_and_survives_critical_step(self):

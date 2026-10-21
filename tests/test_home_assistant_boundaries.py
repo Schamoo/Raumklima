@@ -356,7 +356,7 @@ class HomeAssistantBoundaryTests(unittest.IsolatedAsyncioTestCase):
             data={"mold_warning_duration": 0, "mold_warning_timer_active": False}
         )
 
-        self.assertEqual(sensor.native_value, "aus")
+        self.assertEqual(sensor.native_value, "off")
         self.assertIsNone(sensor.native_unit_of_measurement)
 
         sensor.coordinator.data.update(

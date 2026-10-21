@@ -41,22 +41,39 @@ class RaumklimaLogicTests(unittest.TestCase):
         )
         self.assertEqual(
             self.calculate(
-                relative_humidity=58.0,
+                relative_humidity=60.0,
                 previous_status="ventilation_possible",
                 wall_humidity_value=0,
-                humidity_advisory_reset_threshold=58,
+                humidity_advisory_reset_threshold=60,
             )["status"],
             "ok",
         )
         self.assertEqual(
             self.calculate(
-                relative_humidity=58.1,
+                relative_humidity=60.1,
                 previous_status="ventilation_possible",
                 wall_humidity_value=0,
-                humidity_advisory_reset_threshold=58,
+                humidity_advisory_reset_threshold=60,
             )["status"],
             "ventilation_possible",
         )
+
+    def test_closed_window_advisory_resets_at_configured_threshold(self):
+        common = {
+            "window_state": "off",
+            "previous_status": "ventilation_possible",
+            "humidity_advisory_reset_threshold": 60,
+            "wall_humidity_value": 0,
+        }
+        above_reset = self.calculate(relative_humidity=60.1, **common)
+        self.assertTrue(above_reset["ventilation_needed"])
+        self.assertEqual(above_reset["status"], "ventilation_possible")
+        self.assertFalse(above_reset["target_reached"])
+        self.assertFalse(above_reset["close_required"])
+
+        at_reset = self.calculate(relative_humidity=60, **common)
+        self.assertFalse(at_reset["ventilation_needed"])
+        self.assertEqual(at_reset["status"], "ok")
 
     def test_strict_high_humidity_duration(self):
         self.assertEqual(
@@ -75,7 +92,6 @@ class RaumklimaLogicTests(unittest.TestCase):
     def test_high_humidity_duration_escalates_an_active_possible_status(self):
         result = self.calculate(
             relative_humidity=65.1,
-            previous_status="ventilation_possible",
             high_humidity_seconds=1800,
         )
         self.assertEqual(result["status"], "ventilate")
@@ -137,6 +153,8 @@ class RaumklimaLogicTests(unittest.TestCase):
         self.assertEqual(result["status"], "ventilation_possible")
         self.assertEqual(result["status_text"], "Ventilation possible")
         self.assertIsNone(result["ventilation_effective"])
+        self.assertIsNotNone(result["absolute_humidity_indoor"])
+        self.assertIsNone(result["absolute_humidity_outdoor"])
         self.assertEqual(
             result["ventilation_hint_base_key"], "base_humidity_elevated"
         )
@@ -192,7 +210,7 @@ class RaumklimaLogicTests(unittest.TestCase):
         self.assertTrue(
             self.calculate(
                 relative_humidity=59,
-                previous_status="ventilation_possible",
+                window_state="on",
                 outdoor_temperature=20,
                 outdoor_relative_humidity=outdoor_rh_at_hysteresis - 0.1,
             )["ventilation_effective"]
@@ -209,22 +227,26 @@ class RaumklimaLogicTests(unittest.TestCase):
             relative_humidity=57,
             wall_humidity_value=0,
             window_state="on",
-            previous_status="ventilation_possible",
             humidity_off_threshold=58,
         )
         self.assertTrue(result["target_reached"])
         self.assertTrue(result["close_required"])
         self.assertEqual(result["status"], "close_recommended")
 
-    def test_close_is_not_recommended_without_an_active_ventilation_cycle(self):
-        result = self.calculate(relative_humidity=57, window_state="on")
-        self.assertEqual(result["status"], "ok")
-        self.assertFalse(result["target_reached"])
-        self.assertFalse(result["close_required"])
+    def test_open_window_starts_cycle_and_reaching_target_recommends_closing(self):
+        result = self.calculate(
+            relative_humidity=57,
+            wall_humidity_value=0,
+            window_state="on",
+            humidity_off_threshold=58,
+        )
+        self.assertTrue(result["target_reached"])
+        self.assertTrue(result["close_required"])
+        self.assertEqual(result["status"], "close_recommended")
 
     def test_configured_window_open_duration_requires_closing(self):
         before_timeout = self.calculate(
-            relative_humidity=50,
+            relative_humidity=60,
             wall_humidity_value=0,
             window_state="on",
             window_open_seconds=599,
@@ -233,7 +255,7 @@ class RaumklimaLogicTests(unittest.TestCase):
         self.assertFalse(before_timeout["close_required"])
 
         timeout = self.calculate(
-            relative_humidity=50,
+            relative_humidity=60,
             wall_humidity_value=0,
             window_state="on",
             window_open_seconds=600,
@@ -248,7 +270,7 @@ class RaumklimaLogicTests(unittest.TestCase):
 
     def test_default_window_open_duration_is_10_minutes(self):
         before_timeout = self.calculate(
-            relative_humidity=50,
+            relative_humidity=60,
             wall_humidity_value=0,
             window_state="on",
             window_open_seconds=599,
@@ -256,7 +278,7 @@ class RaumklimaLogicTests(unittest.TestCase):
         self.assertFalse(before_timeout["close_required"])
 
         timeout = self.calculate(
-            relative_humidity=50,
+            relative_humidity=60,
             wall_humidity_value=0,
             window_state="on",
             window_open_seconds=600,
@@ -302,7 +324,6 @@ class RaumklimaLogicTests(unittest.TestCase):
             window_state="on",
             outdoor_temperature=20,
             outdoor_relative_humidity=100,
-            previous_status="ventilation_possible",
         )
         self.assertTrue(result["ventilation_needed"])
         self.assertFalse(result["ventilation_effective"])
@@ -318,9 +339,7 @@ class RaumklimaLogicTests(unittest.TestCase):
             outdoor_temperature=outdoor,
             outdoor_relative_humidity=100,
             window_state="on",
-            previous_status="ventilation_possible",
             humidity_off_threshold=55,
-            humidity_advisory_reset_threshold=59,
             humidity_on_threshold=60,
         )
         self.assertTrue(base["ventilation_needed"])
@@ -332,8 +351,8 @@ class RaumklimaLogicTests(unittest.TestCase):
             relative_humidity=59.5,
             outdoor_temperature=outdoor,
             outdoor_relative_humidity=40,
-            previous_status="ventilation_possible",
-            humidity_advisory_reset_threshold=59,
+            window_state="on",
+            humidity_off_threshold=55,
         )
         self.assertTrue(recovery["ventilation_needed"])
         self.assertEqual(recovery["status"], "ventilation_possible")
@@ -344,9 +363,9 @@ class RaumklimaLogicTests(unittest.TestCase):
             relative_humidity=59,
             wall_humidity_value=0,
             window_state="off",
-            previous_status="close_recommended",
         )
         self.assertFalse(result["close_required"])
+        self.assertFalse(result["target_reached"])
         self.assertEqual(result["status"], "ok")
 
     def test_invalid_indoor_values_report_missing_data(self):
