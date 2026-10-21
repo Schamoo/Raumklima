@@ -162,6 +162,7 @@ class RoomClimateCoordinator:
         self._high_humidity_since = None
         self._high_humidity_timer_needs_validation = False
         self._high_wall_humidity_since = None
+        self._high_wall_humidity_timer_needs_validation = False
         self._previous_status = "ok"
         self.data = {}
         self._listeners = []
@@ -286,6 +287,12 @@ class RoomClimateCoordinator:
             self._high_wall_humidity_since = self._parse_saved_datetime(
                 stored_timers.get("high_wall_humidity_since")
             )
+            self._high_wall_humidity_timer_needs_validation = (
+                self._high_wall_humidity_since is not None
+            )
+            saved_status = stored_timers.get("previous_status")
+            if saved_status in STATUS_LABELS:
+                self._previous_status = saved_status
         self._update_source_listener()
         self._remove_minute_listener = async_track_time_interval(
             self.hass, self._handle_interval, timedelta(minutes=1)
@@ -298,19 +305,20 @@ class RoomClimateCoordinator:
             return None
         return dt_util.parse_datetime(value)
 
+    @staticmethod
+    def _serialize_datetime(value):
+        return value.isoformat() if value is not None else None
+
     @callback
     def _timer_store_data(self) -> dict[str, str | None]:
         return {
-            "high_humidity_since": (
-                self._high_humidity_since.isoformat()
-                if self._high_humidity_since is not None
-                else None
+            "high_humidity_since": self._serialize_datetime(
+                self._high_humidity_since
             ),
-            "high_wall_humidity_since": (
-                self._high_wall_humidity_since.isoformat()
-                if self._high_wall_humidity_since is not None
-                else None
+            "high_wall_humidity_since": self._serialize_datetime(
+                self._high_wall_humidity_since
             ),
+            "previous_status": self._previous_status,
         }
 
     def async_unload(self) -> None:
@@ -457,10 +465,7 @@ class RoomClimateCoordinator:
     def _refresh(self) -> None:
         self._update_source_listener()
         now = dt_util.utcnow()
-        previous_timer_state = (
-            self._high_humidity_since,
-            self._high_wall_humidity_since,
-        )
+        previous_store_data = self._timer_store_data()
         vtherm_entity = self._data.get(CONF_VTHERM_ENTITY)
         room_temp_entity = self._data.get(CONF_ROOM_TEMP_ENTITY)
         room_humidity_entity = self._data.get(CONF_ROOM_HUMIDITY_ENTITY)
@@ -556,17 +561,18 @@ class RoomClimateCoordinator:
             if mold_model_applies(temperature, outdoor_temp_value)
             else None
         )
-        self._high_wall_humidity_since = update_wall_humidity_since(
-            timer_wall_humidity,
-            self._high_wall_humidity_since,
-            now,
-            threshold=settings[CONF_MOLD_WARNING_THRESHOLD],
+        preserve_restored_wall_timer = (
+            wall_humidity is None
+            and self._high_wall_humidity_timer_needs_validation
         )
-        if previous_timer_state != (
-            self._high_humidity_since,
-            self._high_wall_humidity_since,
-        ):
-            self._timer_store.async_delay_save(self._timer_store_data, 1)
+        if not preserve_restored_wall_timer:
+            self._high_wall_humidity_timer_needs_validation = False
+            self._high_wall_humidity_since = update_wall_humidity_since(
+                timer_wall_humidity,
+                self._high_wall_humidity_since,
+                now,
+                threshold=settings[CONF_MOLD_WARNING_THRESHOLD],
+            )
         high_humidity_seconds = (
             (now - self._high_humidity_since).total_seconds()
             if self._high_humidity_since is not None
@@ -652,6 +658,8 @@ class RoomClimateCoordinator:
         )
         if self.data["status"] != "missing_data":
             self._previous_status = self.data["status"]
+        if previous_store_data != self._timer_store_data():
+            self._timer_store.async_delay_save(self._timer_store_data, 1)
         for listener in tuple(self._listeners):
             listener()
 
@@ -750,23 +758,29 @@ class RoomClimateValueSensor(RoomClimateSensorBase):
             self._attr_device_class = SensorDeviceClass.TEMPERATURE
             self._attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
 
+    def _timer_active(self):
+        active_key = TIMER_SENSOR_ACTIVE_KEYS.get(self._key)
+        if active_key is None:
+            return None
+        return self.coordinator.data.get(active_key, False)
+
     @property
     def native_value(self):
-        active_key = TIMER_SENSOR_ACTIVE_KEYS.get(self._key)
-        if active_key:
+        active = self._timer_active()
+        if active is not None:
             return timer_sensor_value(
                 self.coordinator.data.get(self._key),
-                self.coordinator.data.get(active_key, False),
+                active,
             )
         return self.coordinator.data.get(self._key)
 
     @property
     def native_unit_of_measurement(self):
-        active_key = TIMER_SENSOR_ACTIVE_KEYS.get(self._key)
-        if active_key:
+        active = self._timer_active()
+        if active is not None:
             return timer_sensor_unit(
                 self._attr_native_unit_of_measurement,
-                self.coordinator.data.get(active_key, False),
+                active,
             )
         return self._attr_native_unit_of_measurement
 

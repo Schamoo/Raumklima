@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, Mock, patch
 
 from homeassistant.core import CoreState
 from homeassistant.exceptions import HomeAssistantError
+from homeassistant.util import dt as dt_util
 
 from custom_components import raumklima as integration
 from custom_components.raumklima import frontend
@@ -206,12 +207,14 @@ class HomeAssistantBoundaryTests(unittest.IsolatedAsyncioTestCase):
         saved = {
             "high_humidity_since": "2026-01-01T10:00:00+00:00",
             "high_wall_humidity_since": "2026-01-01T11:00:00+00:00",
+            "previous_status": "ventilation_possible",
         }
         coordinator = object.__new__(RoomClimateCoordinator)
         coordinator._timer_store = SimpleNamespace(async_load=AsyncMock(return_value=saved))
         coordinator._high_humidity_since = None
         coordinator._high_humidity_timer_needs_validation = False
         coordinator._high_wall_humidity_since = None
+        coordinator._previous_status = "ok"
         coordinator._update_source_listener = Mock()
         coordinator._refresh = Mock()
         coordinator.hass = SimpleNamespace()
@@ -221,8 +224,39 @@ class HomeAssistantBoundaryTests(unittest.IsolatedAsyncioTestCase):
         self.assertIsNotNone(coordinator._high_humidity_since)
         self.assertTrue(coordinator._high_humidity_timer_needs_validation)
         self.assertIsNotNone(coordinator._high_wall_humidity_since)
+        self.assertTrue(coordinator._high_wall_humidity_timer_needs_validation)
+        self.assertEqual(coordinator._previous_status, "ventilation_possible")
         coordinator._update_source_listener.assert_called_once()
         coordinator._refresh.assert_called_once()
+
+    def test_restored_wall_humidity_timer_survives_unavailable_first_refresh(self):
+        saved_since = dt_util.parse_datetime("2026-01-01T11:00:00+00:00")
+        coordinator = object.__new__(RoomClimateCoordinator)
+        coordinator._data = {}
+        coordinator._entry = SimpleNamespace(options={}, entry_id="room-entry")
+        coordinator.hass = SimpleNamespace(
+            data={DOMAIN: {"settings": dict(DEFAULT_SETTINGS)}},
+            states=SimpleNamespace(get=Mock(return_value=None)),
+        )
+        coordinator._high_humidity_since = None
+        coordinator._high_humidity_timer_needs_validation = False
+        coordinator._high_wall_humidity_since = saved_since
+        coordinator._high_wall_humidity_timer_needs_validation = True
+        coordinator._previous_status = "ventilate"
+        coordinator._timer_store = SimpleNamespace(async_delay_save=Mock())
+        coordinator._update_source_listener = Mock()
+        coordinator._translate = Mock(
+            side_effect=lambda key, placeholders=None, fallback=None: fallback or ""
+        )
+        coordinator._listeners = []
+        coordinator._window_entity = None
+
+        RoomClimateCoordinator._refresh(coordinator)
+
+        self.assertEqual(coordinator._high_wall_humidity_since, saved_since)
+        self.assertTrue(coordinator._high_wall_humidity_timer_needs_validation)
+        self.assertEqual(coordinator._previous_status, "ventilate")
+        coordinator._timer_store.async_delay_save.assert_not_called()
 
     def test_vtherm_window_entity_change_replaces_listener(self):
         removed = Mock()
