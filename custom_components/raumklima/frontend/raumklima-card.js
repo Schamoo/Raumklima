@@ -378,7 +378,7 @@ class RaumklimaCard extends HTMLElement {
           entity: entities.window_open || roomEntity,
           icon: `{% set close_required = state_attr('${roomEntity}', 'close_required') %} {% set window_open = state_attr('${roomEntity}', 'window_open') %} {% if close_required in [true, 'true'] %} mdi:check-circle {% elif window_open in [true, 'true'] %} mdi:window-open-variant {% else %} mdi:window-closed-variant {% endif %}`,
           icon_color: `{% set status = states('${roomEntity}') %} {% set close_required = state_attr('${roomEntity}', 'close_required') %} {% if status == 'ventilate' %} red {% elif status == 'ventilation_possible' %} amber {% elif close_required in [true, 'true'] or status == 'ok' %} green {% else %} disabled {% endif %}`,
-          tap_action: { action: "more-info" },
+          tap_action: { action: "more-info", entity: roomEntity },
           card_mod: {
             style: `
               @keyframes window-pulse {

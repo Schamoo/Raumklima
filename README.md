@@ -41,7 +41,7 @@ Required frontend cards: `stack-in-card`, Mushroom, and `card-mod`. For YAML-man
 ```yaml
 lovelace:
   resources:
-    - url: /raumklima/raumklima-card.js?v=1.0.5
+    - url: /raumklima/raumklima-card.js?v=1.0.6
       type: module
 ```
 
