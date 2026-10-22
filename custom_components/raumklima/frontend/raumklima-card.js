@@ -375,19 +375,19 @@ class RaumklimaCard extends HTMLElement {
       chips: [
         {
           type: "template",
-          entity: entities.window_open || roomEntity,
+          entity: roomEntity,
           icon: `{% set close_required = state_attr('${roomEntity}', 'close_required') %} {% set window_open = state_attr('${roomEntity}', 'window_open') %} {% if close_required in [true, 'true'] %} mdi:check-circle {% elif window_open in [true, 'true'] %} mdi:window-open-variant {% else %} mdi:window-closed-variant {% endif %}`,
           icon_color: `{% set status = states('${roomEntity}') %} {% set close_required = state_attr('${roomEntity}', 'close_required') %} {% if status == 'ventilate' %} red {% elif status == 'ventilation_possible' %} amber {% elif close_required in [true, 'true'] or status == 'ok' %} green {% else %} disabled {% endif %}`,
           tap_action: { action: "more-info", entity: roomEntity },
           card_mod: {
             style: `
               @keyframes window-pulse {
-                0%, 100% { opacity: 1; filter: brightness(1.5) drop-shadow(0 0 5px currentColor); transform: scale(1.12); }
-                50% { opacity: 0.55; filter: brightness(1); transform: scale(1); }
+                0%, 100% { opacity: 1; filter: brightness(1.6) drop-shadow(0 0 6px currentColor); transform: scale(1.12); }
+                50% { opacity: 0.5; filter: brightness(1); transform: scale(1); }
               }
-              ha-state-icon {
-                {% if is_state('${entities.window_open || roomEntity}', 'on') or state_attr('${roomEntity}', 'window_open') in [true, 'true'] %}
-                animation: window-pulse 1.5s ease-in-out infinite !important;
+              ha-card {
+                {% if state_attr('${roomEntity}', 'window_open') in [true, 'true'] %}
+                animation: window-pulse 1.5s ease-in-out infinite;
                 {% else %}
                 animation: none !important;
                 {% endif %}
