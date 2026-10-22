@@ -343,8 +343,8 @@ class RaumklimaCard extends HTMLElement {
       type: "custom:mushroom-chips-card",
       alignment: "center",
       card_mod: {
-        style: `
-          ha-card {
+        style: {
+          "ha-card": `
             background: none !important;
             border: none !important;
             box-shadow: none !important;
@@ -358,9 +358,22 @@ class RaumklimaCard extends HTMLElement {
             --chip-spacing: 4px !important;
             --chip-padding: 0 8px !important;
             padding: 2px 0 14px !important;
-          }
-          .chip-container { flex-wrap: nowrap !important; }
-        `,
+          `,
+          ".chip-container": "flex-wrap: nowrap !important;",
+          "mushroom-template-chip:nth-child(1)$": `
+            @keyframes window-pulse {
+              0%, 100% { opacity: 1; filter: brightness(1.5) drop-shadow(0 0 5px currentColor); transform: scale(1.12); }
+              50% { opacity: 0.55; filter: brightness(1); transform: scale(1); }
+            }
+            ha-state-icon {
+              {% if is_state('${entities.window_open || roomEntity}', 'on') or state_attr('${roomEntity}', 'window_open') in [true, 'true'] %}
+              animation: window-pulse 1.5s ease-in-out infinite !important;
+              {% else %}
+              animation: none !important;
+              {% endif %}
+            }
+          `,
+        },
       },
       chips: [
         {
@@ -368,22 +381,7 @@ class RaumklimaCard extends HTMLElement {
           entity: entities.window_open || roomEntity,
           icon: `{% set close_required = state_attr('${roomEntity}', 'close_required') %} {% set window_open = state_attr('${roomEntity}', 'window_open') %} {% if close_required in [true, 'true'] %} mdi:check-circle {% elif window_open in [true, 'true'] %} mdi:window-open-variant {% else %} mdi:window-closed-variant {% endif %}`,
           icon_color: `{% set status = states('${roomEntity}') %} {% set close_required = state_attr('${roomEntity}', 'close_required') %} {% if status == 'ventilate' %} red {% elif status == 'ventilation_possible' %} amber {% elif close_required in [true, 'true'] or status == 'ok' %} green {% else %} disabled {% endif %}`,
-          tap_action: { action: "more-info" },
-          card_mod: {
-            style: `
-              @keyframes window-pulse {
-                0%, 100% { opacity: 1; filter: brightness(1.5) drop-shadow(0 0 5px currentColor); transform: scale(1.12); }
-                50% { opacity: 0.55; filter: brightness(1); transform: scale(1); }
-              }
-              ha-state-icon {
-                {% if is_state('${entities.window_open || roomEntity}', 'on') or state_attr('${roomEntity}', 'window_open') in [true, 'true'] %}
-                animation: window-pulse 1.5s ease-in-out infinite !important;
-                {% else %}
-                animation: none !important;
-                {% endif %}
-              }
-            `,
-          },
+          tap_action: { action: "more-info", entity: roomEntity },
         },
         {
           type: "template",
