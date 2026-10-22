@@ -41,7 +41,7 @@ Required frontend cards: `stack-in-card`, Mushroom, and `card-mod`. For YAML-man
 ```yaml
 lovelace:
   resources:
-    - url: /raumklima/raumklima-card.js
+    - url: /raumklima/raumklima-card.js?v=1.0.2
       type: module
 ```
 
@@ -49,7 +49,7 @@ The preset control switches between `eco` and `comfort` using the `raumklima.tog
 
 ## Build
 
-No separate build step is required. Home Assistant loads the Python integration and JavaScript card directly. The storage-mode card resource uses the integration version from `manifest.json` for cache busting. YAML-managed dashboards use the stable resource URL shown above.
+No separate build step is required. Home Assistant loads the Python integration and JavaScript card directly. The storage-mode card resource uses the integration version from `manifest.json` for cache busting. Update the version query in YAML-managed resource URLs when upgrading the integration.
 
 ## Tests
 
