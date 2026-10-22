@@ -182,11 +182,21 @@ class RaumklimaCard extends HTMLElement {
   }
 
   _signature(roomState, entities) {
+    // Fensterzustand ist Teil der Signatur, damit die Karte bei jedem
+    // Wechsel komplett neu gebaut wird und die card-mod-Templates (Blinken)
+    // frisch ausgewertet werden (Workaround für Android Companion App).
+    const windowEntityState = entities.window_open
+      ? this._hass?.states?.[entities.window_open]?.state
+      : undefined;
     return JSON.stringify({
       entity: this._config.entity,
       roomName: roomState.attributes.room_name,
       icon: this._config.icon,
       roomEntities: entities,
+      status: roomState.state,
+      windowOpen: roomState.attributes.window_open,
+      closeRequired: roomState.attributes.close_required,
+      windowEntityState,
     });
   }
 
@@ -368,16 +378,16 @@ class RaumklimaCard extends HTMLElement {
           entity: entities.window_open || roomEntity,
           icon: `{% set close_required = state_attr('${roomEntity}', 'close_required') %} {% set window_open = state_attr('${roomEntity}', 'window_open') %} {% if close_required in [true, 'true'] %} mdi:check-circle {% elif window_open in [true, 'true'] %} mdi:window-open-variant {% else %} mdi:window-closed-variant {% endif %}`,
           icon_color: `{% set status = states('${roomEntity}') %} {% set close_required = state_attr('${roomEntity}', 'close_required') %} {% if status == 'ventilate' %} red {% elif status == 'ventilation_possible' %} amber {% elif close_required in [true, 'true'] or status == 'ok' %} green {% else %} disabled {% endif %}`,
-          tap_action: { action: "more-info", entity: roomEntity },
+          tap_action: { action: "more-info" },
           card_mod: {
             style: `
               @keyframes window-pulse {
-                0%, 100% { opacity: 1; filter: brightness(1.6) drop-shadow(0 0 6px currentColor); transform: scale(1.12); }
-                50% { opacity: 0.5; filter: brightness(1); transform: scale(1); }
+                0%, 100% { opacity: 1; filter: brightness(1.5) drop-shadow(0 0 5px currentColor); transform: scale(1.12); }
+                50% { opacity: 0.55; filter: brightness(1); transform: scale(1); }
               }
-              ha-card {
+              ha-state-icon {
                 {% if is_state('${entities.window_open || roomEntity}', 'on') or state_attr('${roomEntity}', 'window_open') in [true, 'true'] %}
-                animation: window-pulse 1.5s ease-in-out infinite;
+                animation: window-pulse 1.5s ease-in-out infinite !important;
                 {% else %}
                 animation: none !important;
                 {% endif %}
